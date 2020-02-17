@@ -1,0 +1,36 @@
+# Todo list
+NOTE: This todo list is far from finished, and more will probably be added in the future,
+as I think of more things to add to the project. Also, as I work on some features I will
+get more specific tasks to do, which I will then add to the todo list.
+
+## "Code parser"
+* Design some good syntax
+* Split into tokenizer, parser e.t.c
+ * Make tokenizer
+ * Make parser
+ * AST into synth engine format
+
+## Sequencing
+* Add sequencing
+* Add midi import support?
+
+## Synth engine
+* Change datastructure, separate synth definitions and execution
+* Optimize internal synth structures
+ * Const expressions, i.e. constant func running on constants can be evaluated at startup.
+* "Probes", variables can be probed in order to get a history of their values.
+            This should allow delays to be more efficient, as multiple delays can
+	    use the same probe if they are delaying the same value
+  + Optimization: If a probe is defined for the variable "x",
+          a delay is defined as "delay ($x, 1.0)", and another is set
+	  as "delay (+ ($x, 1.0), 1.0)", then change this occurance to "+(1.0, delay($x, 1.0))" so that
+	  the same probe can be used for both delays. The point of this
+	  is that, we should probe values as far "in" as possible, if constant
+	  are added or multiplied onto a value that is probed, we can simply
+	  move those operations outside of the delay without changing the result,
+	  and in return get fewer probes in total.
+
+## Export
+* Export mp3
+* Export ogg
+* Export different variables instead of just "left" and "right"
