@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use crate::sound_gen::SampleGiver;
 
 pub struct Variables {
-    data: Vec<(f32, SampleGiver)>,
+    pub data: Vec<Option<SampleGiver>>,
     name_mapping: HashMap<String, usize>,
+    verified: bool,
 }
 
 impl Variables {
@@ -11,37 +12,57 @@ impl Variables {
         Variables {
             data: Vec::new(),
             name_mapping: HashMap::new(),
+            verified: false,
         }
     }
 
-    pub fn iter<'a>(&'a self) -> std::slice::Iter<'a, (f32, SampleGiver)> {
-        self.data.iter()
-    }
-
-    pub fn iter_mut<'a>(&'a mut self) -> std::slice::IterMut<'a, (f32, SampleGiver)> {
-        self.data.iter_mut()
-    }
+    pub fn len(&self) -> usize { self.data.len() }
 
     pub fn add_var(&mut self, name: String, data: SampleGiver) -> usize {
-        let id = self.data.len();
-        self.data.push((0.0, data));
-        self.name_mapping.insert(name, id);
-        id
+        if let Some(id) = self.name_to_id(&name[..]) {
+            self.data[id] = Some(data);
+            id
+        }else{
+            let id = self.len();
+            self.data.push(Some(data));
+            self.name_mapping.insert(name, id);
+            self.verified = false;
+            id
+        }
     }
 
-    pub fn name_to_id(&mut self, name: &str) -> Option<usize> {
+    pub fn name_to_id(&self, name: &str) -> Option<usize> {
         self.name_mapping.get(name).map(|v| *v)
     }
 
-    pub fn get_var_sample(&self, id: usize) -> Option<f32> {
-        if let Some(val) = self.data.get(id) {
-            Some(val.0)
-        }else{
-            None
-        }
+    pub fn is_verified(&self) -> bool {
+        self.verified
     }
 
-    pub fn get_mut_var<'a>(&'a mut self, id: usize) -> Option<&'a mut (f32, SampleGiver)> {
-        self.data.get_mut(id)
+    pub fn verify(&mut self) -> bool {
+        // Go through each variable
+        // and make sure that it is
+        // defined
+        for sample_giver in self.data.iter() {
+            if sample_giver.is_none() {
+                self.verified = false;
+                return false;
+            }
+        }
+
+        self.verified = true;
+        true
+    }
+
+    pub fn name_to_id_or_add(&mut self, name: &str) -> usize {
+        if let Some(id) = self.name_mapping.get(name) {
+            *id
+        }else {
+            let id = self.len();
+            self.data.push(None);
+            self.name_mapping.insert(name.to_string(), id);
+            self.verified = false;
+            id
+        }
     }
 }

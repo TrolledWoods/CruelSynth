@@ -1,28 +1,50 @@
-use crate::variables::Variables;
-
 pub enum SampleGiver {
     Constant(f32),
     Generator(Box<dyn SoundGenerator>, Vec<SampleGiver>),
     Variable(usize),
 }
 
+impl std::fmt::Debug for SampleGiver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SampleGiver::Constant(constant) => {
+                write!(f, "const {}", constant)?;
+            },
+            SampleGiver::Generator(_, sample_givers) => {
+                write!(f, "fn (")?;
+                for (i, sample_giver) in sample_givers.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", {:?}", sample_giver)?;
+                    }else{
+                        write!(f, "{:?}", sample_giver)?;
+                    }
+                }
+                write!(f, ")")?;
+            },
+            SampleGiver::Variable(id) => {
+                write!(f, "var {}", id)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 impl SampleGiver {
-    pub fn get_value(&mut self, vars: &Variables) -> f32 {
+    pub fn get_value(&mut self, variables: &[f32], sample_rate: usize) -> f32 {
         match self {
             SampleGiver::Constant(constant) => *constant,
-            SampleGiver::Variable(variable_id) => 
-                vars.get_var_sample(variable_id)
-                    .expect("Invalid variable id in SampleGiver, should not be possible"),
+            SampleGiver::Variable(variable_id) => variables[*variable_id],
             SampleGiver::Generator(sound_gen, args) => {
                 // We assume here that the number of arguments
                 // is equal to the number of parameters in the
                 // sound generator.
-                for (i, arg) in args.iter_mut().enumerate() {
-                    let output = arg.get_value(vars);
-                    sound_gen.set_param(i, output);
+                let mut buffer = Vec::with_capacity(10);
+                for arg in args.iter_mut() {
+                    buffer.push(arg.get_value(variables, sample_rate));
                 }
 
-                sound_gen.get_output()
+                sound_gen.get_output(&buffer[..], sample_rate)
             }
         }
     }
@@ -33,12 +55,12 @@ pub trait SoundGenerator {
     /// This will never change.
     fn n_params(&self) -> usize;
 
-    /// Panics if the param_id is larger than the
-    /// number of parameters(n_params method)
-    fn set_param(&mut self, param_id: usize, value: f32);
+    fn get_param_names(&self) -> &'static str;
 
     /// Returns the output of the generator
     /// Can mutate internal state, so only call once
     /// per sampling point.
-    fn get_output(&mut self) -> f32;
+    /// The params argument has to be the same length
+    /// as the n_params function returns
+    fn get_output(&mut self, params: &[f32], sample_rate: usize) -> f32;
 }

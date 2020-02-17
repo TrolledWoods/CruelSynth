@@ -1,0 +1,6 @@
+lead = * + 0.7 * 0.3 osc 10.0 clamp * 8.0 osc * 500.0 $z 0
+y = * 30.0 osc 1.0
+x = clamp * 3.0 osc + $y 15000.0 0
+z = delay $x + 1.0 * 0.1 osc 0.5
+left = * 10.0 + * 0.3 $z * 0.7 $x
+right = + * 0.3 $z * 0.3 $lead
