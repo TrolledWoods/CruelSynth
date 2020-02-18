@@ -194,6 +194,17 @@ fn parse_expression(tokens: &mut Peekable<impl Iterator<Item = Token>>)
                     )
                 }
             },
+            TokenKind::Operator(op) => {
+                let args = parse_args_list(tokens)?;
+                let pos = token.pos;
+
+                Ok(
+                    Node::with_pos(
+                        ExpressionNode::Operator(op, args),
+                        pos
+                        )
+                )
+            },
             TokenKind::Identifier(name) => {
                 Ok(parse_function(tokens, name)?)
             },
