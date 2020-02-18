@@ -3,6 +3,7 @@ use crate::synth::Synth;
 
 mod tokenize;
 mod parser;
+mod compile;
 
 #[derive(Debug)]
 pub struct CompileError {
@@ -15,6 +16,7 @@ pub enum CompileErrorKind {
     IOError(std::io::Error),
     TokenizerError(tokenize::TokenErrorKind),
     ParseError(parser::ParseErrorKind),
+    CompileError(compile::CompileErrorKind),
     TestError,
 }
 
@@ -29,10 +31,8 @@ pub fn compile_file(path: impl AsRef<Path>) -> Result<Synth, CompileError> {
     let commands = parser::parse_tokens(&mut tokens.into_iter().peekable())
         .map_err(|v| CompileError { kind: CompileErrorKind::ParseError(v.kind), pos: v.pos })?;
 
-    println!("{:?}", commands);
+    let synth = compile::compile(commands)
+        .map_err(|v| CompileError { kind: CompileErrorKind::CompileError(v.kind), pos: v.pos })?;
 
-    Err(CompileError {
-        kind: CompileErrorKind::TestError,
-        pos: None,
-    })
+    Ok(synth)
 }

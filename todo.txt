@@ -1,7 +1,6 @@
 # Current task:
 * Split into tokenizer, parser e.t.c
- * Make parser
- * AST into synth engine format
+ * Compile into a synth
 
 # Todo list
 NOTE: This todo list is far from finished, and more will probably be added in the future,

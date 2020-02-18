@@ -22,8 +22,8 @@ pub enum ParseErrorKind {
 }
 
 pub struct Node<T> {
-    kind: T,
-    pos: Option<(usize, usize)>,
+    pub kind: T,
+    pub pos: Option<(usize, usize)>,
 }
 
 impl<T> Node<T> {

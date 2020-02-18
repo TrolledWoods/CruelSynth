@@ -8,27 +8,13 @@ fn main() {
     use synth::{ Node, NodeType };
     use operator::Operator;
 
-    lang::compile_file("input.txt").unwrap();
-
-    let mut synth = synth::Synth::new();
-    let const_1 = synth.add_node(Node::constant(10.0));
-    let yes = synth.add_node(Node::oscillator(const_1, 0.0));
-    let const_2 = synth.add_node(Node::constant(120.0));
-    let const_3 = synth.add_node(Node::constant(150.0));
-    let const_4 = synth.add_node(Node::constant(1.25));
-    let osc_yes = synth.add_node(Node::oscillator(const_4, 0.0));
-    let osc_mul = synth.add_node(Node::constant_op(Operator::Mult, osc_yes, const_2));
-    let mult = synth.add_node(Node::constant_op(Operator::Mult, osc_mul, yes));
-    let add = synth.add_node(Node::constant_op(Operator::Add, const_3, mult));
-    let osc = synth.add_node(Node::oscillator(add, 0.0));
-
-    println!("{:?}", &synth);
+    let mut synth = lang::compile_file("input.txt").unwrap();
 
     let mut samples = Vec::new();
     let mut buffer = Vec::new();
-    for i in (0..(48000 * 10)) {
+    for _ in (0..(48000 * 60)) {
         synth.run(&mut buffer, 1.0 / 48000.0);
-        samples.push((buffer[osc.0 as usize], buffer[osc.0 as usize]));
+        samples.push((buffer[buffer.len() - 1], buffer[buffer.len() - 1]));
     }
 
     write_to_wave("C:/Users/johnm/Music/test2.wav", &samples[..], 48000);
