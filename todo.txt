@@ -1,3 +1,6 @@
+# Current task:
+Change datastructure, separate synth definitions and execution
+
 # Todo list
 NOTE: This todo list is far from finished, and more will probably be added in the future,
 as I think of more things to add to the project. Also, as I work on some features I will
@@ -15,7 +18,7 @@ get more specific tasks to do, which I will then add to the todo list.
 * Add midi import support?
 
 ## Synth engine
-* Change datastructure, separate synth definitions and execution
+* Make a macro to make it easier to add more node types
 * Optimize internal synth structures
  * Const expressions, i.e. constant func running on constants can be evaluated at startup.
 * "Probes", variables can be probed in order to get a history of their values.

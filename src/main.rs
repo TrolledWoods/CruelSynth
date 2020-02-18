@@ -5,6 +5,7 @@ mod sound_gen;
 mod variables;
 mod oscillator;
 mod effects;
+mod synth;
 
 use oscillator::Oscillator;
 use sound_gen::SampleGiver;
@@ -115,6 +116,14 @@ fn parse_synthesizer(input: &str, functions: &Functions) -> Result<Variables, St
 }
 
 fn main() {
+    use synth::{ ShallowNode, NodeType, ConstantOp };
+
+    let mut synth = synth::Synth::new();
+    let const_1 = synth.add_shallow_node(ShallowNode::constant(50.0));
+    let osc = synth.add_shallow_node(ShallowNode::oscillator(const_1, 0.0));
+
+    return;
+
     let mut functions: HashMap<&'static str, Box<dyn Fn() -> Box<dyn SoundGenerator>>> = HashMap::new();
     functions.insert("osc", Box::new(|| Box::new(Oscillator::new())));
     functions.insert("*", Box::new(|| Box::new(|a, b| a * b)));
