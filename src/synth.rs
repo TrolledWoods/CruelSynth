@@ -53,12 +53,12 @@ const MAX_INPUTS: usize = 3;
 /// will change when you remove a node.
 /// Therefore, to avoid confuzzlement,
 /// please make sure that you do not delete
-/// any node while holding onto a ShallowNode
-/// of your own. Make sure to drop all ShallowNodes
+/// any node while holding onto a Node
+/// of your own. Make sure to drop all Nodes
 /// before deleting anything.
 #[derive(Debug)]
 pub struct Synth {
-    nodes: Vec<ShallowNode>
+    nodes: Vec<Node>
 }
 
 impl Synth {
@@ -85,7 +85,7 @@ impl Synth {
         }
     }
 
-    pub fn find_shallow_node(&mut self, node_to_find: &ShallowNode) -> Option<NodeId> {
+    pub fn find_node(&mut self, node_to_find: &Node) -> Option<NodeId> {
         for (i, node) in self.nodes.iter().enumerate() {
             if node == node_to_find {
                 return Some(NodeId(i as u32));
@@ -95,11 +95,11 @@ impl Synth {
         None
     }
 
-    pub fn add_shallow_node(&mut self, node: ShallowNode) -> NodeId {
+    pub fn add_node(&mut self, node: Node) -> NodeId {
         // Here we check to see if an identical node already exists.
         // This probably won't happen for more complicated nodes,
         // but for things like constants this could indeed happen!
-        if let Some(node_id) = self.find_shallow_node(&node) {
+        if let Some(node_id) = self.find_node(&node) {
             node_id
         }else{
             let node_id = NodeId(self.nodes.len() as u32);
@@ -110,33 +110,33 @@ impl Synth {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ShallowNode {
+pub struct Node {
     inputs: [MaybeNodeId; MAX_INPUTS],
     kind: NodeType,
 }
 
-impl ShallowNode {
-    pub fn oscillator(freq: NodeId, offset: f32) -> ShallowNode {
+impl Node {
+    pub fn oscillator(freq: NodeId, offset: f32) -> Node {
         let mut inputs = [MaybeNodeId::none(); MAX_INPUTS];
         inputs[0] = freq.maybe();
-        ShallowNode {
+        Node {
             inputs: inputs,
             kind: NodeType::Oscillator(offset),
         }
     }
 
-    pub fn constant(constant: f32) -> ShallowNode {
-        ShallowNode {
+    pub fn constant(constant: f32) -> Node {
+        Node {
             inputs: [MaybeNodeId::none(); MAX_INPUTS],
             kind: NodeType::Constant(constant),
         }
     }
 
-    pub fn constant_op(constant_op: ConstantOp, a: NodeId, b: NodeId) -> ShallowNode {
+    pub fn constant_op(constant_op: ConstantOp, a: NodeId, b: NodeId) -> Node {
         let mut inputs = [MaybeNodeId::none(); MAX_INPUTS];
         inputs[0] = a.maybe();
         inputs[1] = b.maybe();
-        ShallowNode {
+        Node {
             inputs: inputs,
             kind: NodeType::ConstantOp(constant_op),
         }

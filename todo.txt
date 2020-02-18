@@ -1,5 +1,5 @@
 # Current task:
-Change datastructure, separate synth definitions and execution
+Design some good syntax
 
 # Todo list
 NOTE: This todo list is far from finished, and more will probably be added in the future,
@@ -7,7 +7,6 @@ as I think of more things to add to the project. Also, as I work on some feature
 get more specific tasks to do, which I will then add to the todo list.
 
 ## "Code parser"
-* Design some good syntax
 * Split into tokenizer, parser e.t.c
  * Make tokenizer
  * Make parser
