@@ -1,6 +1,7 @@
 # Current task:
-* Split into tokenizer, parser e.t.c
- * Compile into a synth
+* "Probes", variables can be probed in order to get a history of their values.
+            This should allow delays to be more efficient, as multiple delays can
+	    use the same probe if they are delaying the same value
 
 # Todo list
 NOTE: This todo list is far from finished, and more will probably be added in the future,
@@ -18,9 +19,6 @@ get more specific tasks to do, which I will then add to the todo list.
 * Make a macro to make it easier to add more node types
 * Optimize internal synth structures
  * Const expressions, i.e. constant func running on constants can be evaluated at startup.
-* "Probes", variables can be probed in order to get a history of their values.
-            This should allow delays to be more efficient, as multiple delays can
-	    use the same probe if they are delaying the same value
   + Optimization: If a probe is defined for the variable "x",
           a delay is defined as "delay ($x, 1.0)", and another is set
 	  as "delay (+ ($x, 1.0), 1.0)", then change this occurance to "+(1.0, delay($x, 1.0))" so that

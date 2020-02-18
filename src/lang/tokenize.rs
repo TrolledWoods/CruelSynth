@@ -328,7 +328,17 @@ fn read_identifier(code: &mut Peekable<impl Iterator<Item = char>>, pos: &mut (u
 
 fn skip_whitespace(code: &mut Peekable<impl Iterator<Item = char>>, pos: &mut (usize, usize)) {
     while let Some(&value) = code.peek() {
-        if value.is_whitespace() {
+        if value == '#' {
+            while let Some(value) = code.next() {
+                if value == '\n' {
+                    pos.1 = 0;
+                    pos.0 += 1;
+                    return;
+                }else{
+                    pos.1 += 1;
+                }
+            }
+        }else if value.is_whitespace() {
             if value == '\n' {
                 pos.1 = 0;
                 pos.0 += 1;
