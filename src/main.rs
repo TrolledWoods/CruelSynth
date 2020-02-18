@@ -2,9 +2,11 @@ use std::path::Path;
 
 mod synth;
 mod lang;
+mod operator;
 
 fn main() {
-    use synth::{ Node, NodeType, ConstantOp };
+    use synth::{ Node, NodeType };
+    use operator::Operator;
 
     let mut synth = synth::Synth::new();
     let const_1 = synth.add_node(Node::constant(10.0));
@@ -13,9 +15,9 @@ fn main() {
     let const_3 = synth.add_node(Node::constant(150.0));
     let const_4 = synth.add_node(Node::constant(1.25));
     let osc_yes = synth.add_node(Node::oscillator(const_4, 0.0));
-    let osc_mul = synth.add_node(Node::constant_op(ConstantOp::Mult, osc_yes, const_2));
-    let mult = synth.add_node(Node::constant_op(ConstantOp::Mult, osc_mul, yes));
-    let add = synth.add_node(Node::constant_op(ConstantOp::Add, const_3, mult));
+    let osc_mul = synth.add_node(Node::constant_op(Operator::Mult, osc_yes, const_2));
+    let mult = synth.add_node(Node::constant_op(Operator::Mult, osc_mul, yes));
+    let add = synth.add_node(Node::constant_op(Operator::Add, const_3, mult));
     let osc = synth.add_node(Node::oscillator(add, 0.0));
 
     println!("{:?}", &synth);

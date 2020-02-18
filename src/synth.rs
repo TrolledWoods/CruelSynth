@@ -1,3 +1,5 @@
+use crate::operator::Operator;
+
 /// The contents of this NodeId type cannot
 /// ever be equal to "NIL_NODE_ID", because
 /// that is essentially null
@@ -132,13 +134,13 @@ impl Node {
         }
     }
 
-    pub fn constant_op(constant_op: ConstantOp, a: NodeId, b: NodeId) -> Node {
+    pub fn constant_op(operator: Operator, a: NodeId, b: NodeId) -> Node {
         let mut inputs = [MaybeNodeId::none(); MAX_INPUTS];
         inputs[0] = a.maybe();
         inputs[1] = b.maybe();
         Node {
             inputs: inputs,
-            kind: NodeType::ConstantOp(constant_op),
+            kind: NodeType::ConstantOp(operator),
         }
     }
 }
@@ -147,7 +149,7 @@ impl Node {
 pub enum NodeType {
     Oscillator(f32),
     Constant(f32),
-    ConstantOp(ConstantOp),
+    ConstantOp(Operator),
 }
 
 impl NodeType {
@@ -179,30 +181,7 @@ impl NodeType {
                 (*t * 2.0 * std::f32::consts::PI).sin()
             },
             Constant(c) => *c,
-            ConstantOp(op) => op.run(inputs[0], inputs[1]),
-        }
-    }
-}
-
-#[derive(PartialEq, Debug, Clone, Copy)]
-pub enum ConstantOp {
-    Add,
-    Sub,
-    Mult,
-    Div,
-    Mod,
-}
-
-impl ConstantOp {
-    #[inline]
-    pub fn run(&self, a: f32, b: f32) -> f32 {
-        use ConstantOp::*;
-        match self {
-            Add => a + b,
-            Sub => a - b,
-            Mult => a * b,
-            Div => a / b,
-            Mod => a % b,
+            ConstantOp(op) => op.evaluate(inputs[0], inputs[1]),
         }
     }
 }

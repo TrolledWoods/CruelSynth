@@ -1,10 +1,12 @@
 use std::path::Path;
 use crate::synth::Synth;
 
+mod tokenize;
+
 #[derive(Debug)]
 pub struct CompileError {
     pub kind: CompileErrorKind,
-    pub position: Option<(usize, usize)>,
+    pub pos: Option<(usize, usize)>,
 }
 
 #[derive(Debug)]
@@ -14,8 +16,14 @@ pub enum CompileErrorKind {
 }
 
 pub fn compile_file(path: impl AsRef<Path>) -> Result<Synth, CompileError> {
-    Err(CompileError{
+    let contents = 
+        std::fs::read_to_string(path)
+        .map_err(|v| CompileError { kind: CompileErrorKind::IOError(v), pos: None })?;    
+
+    println!("{:?}", tokenize::tokenize(contents.as_str()));
+
+    Err(CompileError {
         kind: CompileErrorKind::TestError,
-        position: None
+        pos: None,
     })
 }
