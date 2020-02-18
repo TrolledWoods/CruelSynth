@@ -1,5 +1,6 @@
 use std::iter::Peekable;
 use crate::operator::Operator;
+use std::fmt::{ self, Display, Debug, Formatter };
 
 #[derive(Debug)]
 pub struct TokenError {
@@ -9,16 +10,30 @@ pub struct TokenError {
 
 #[derive(Debug)]
 pub enum TokenErrorKind {
-    ExpectedOperator,
-    UnexpectedToken,
+    ExpectedToken(char),
+    UnexpectedEndOfFile,
+    UnexpectedToken(char),
     EmptyIdentifier,
     InvalidFloat,
+    InvalidOperator,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 pub struct Token {
     pub pos: (usize, usize),
     pub kind: TokenKind
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", &self.kind)
+    }
+}
+
+impl Debug for Token {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", &self.kind)
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -28,7 +43,70 @@ pub enum TokenKind {
     Separator(char),
     Identifier(String),
     Float(f32),
-    Block(char, Vec<Token>),
+    Block(BlockKind, Vec<Token>),
+    CommandTerminator,
+}
+
+/// Ignore this type, it is just because
+/// the trait system is a bit annoying
+/// sometimes
+pub struct TokenSlice<'a>(&'a [Token]);
+
+impl Display for TokenSlice<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for (i, token) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, " {}", token)?;
+            }else{
+                write!(f, "{}", token)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+pub fn as_displayable_tokens<'a>(tokens: &'a [Token]) -> TokenSlice<'a> {
+    TokenSlice(tokens)
+}
+
+pub fn print_tokens(tokens: &[Token]) {
+    println!("{}", as_displayable_tokens(tokens));
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BlockKind {
+    Parenthesis,
+    Bracket
+}
+
+impl Display for TokenKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        use TokenKind::*;
+        match self {
+            Operator(op) => write!(f, "{:?}", op)?,
+            Assignment => write!(f, ":")?,
+            Separator(c) => write!(f, "{}", c)?,
+            Identifier(s) => write!(f, "{}", s)?,
+            Float(float) => write!(f, "{}", float)?,
+            Block(kind, contents) => {
+                write!(f, "{}", match kind {
+                    BlockKind::Parenthesis => '(',
+                    BlockKind::Bracket => '['
+                })?;
+
+                write!(f, "{}", as_displayable_tokens(&contents[..]))?;
+
+                write!(f, "{}", match kind {
+                    BlockKind::Parenthesis => ')',
+                    BlockKind::Bracket => ']'
+                })?;
+            },
+            CommandTerminator => write!(f, ";")?,
+        }
+
+        Ok(())
+    }
 }
 
 pub fn tokenize(code: &str) -> Result<Vec<Token>, TokenError> {
@@ -44,6 +122,16 @@ fn tokenize_setup(code: &mut Peekable<impl Iterator<Item = char>>,
         skip_whitespace(code, pos);
 
         if let Some(&c) = code.peek() {
+            // See if we should terminate the tokenizing
+            if let Some(terminator) = terminator {
+                if c == terminator {
+                    pos.1 += 1;
+                    code.next();
+                    break;
+                }
+            }
+
+            // See if it's the beginning of a token
             match c {
                 '(' => {
                     let token_pos = pos.clone();
@@ -51,7 +139,7 @@ fn tokenize_setup(code: &mut Peekable<impl Iterator<Item = char>>,
                     code.next();
                     let block_tokens = tokenize_setup(code, pos, Some(')'))?;
                     tokens.push(Token {
-                        kind: TokenKind::Block('(', block_tokens),
+                        kind: TokenKind::Block(BlockKind::Parenthesis, block_tokens),
                         pos: token_pos
                     });
                 },
@@ -61,9 +149,33 @@ fn tokenize_setup(code: &mut Peekable<impl Iterator<Item = char>>,
                     code.next();
                     let block_tokens = tokenize_setup(code, pos, Some(']'))?;
                     tokens.push(Token {
-                        kind: TokenKind::Block('[', block_tokens),
+                        kind: TokenKind::Block(BlockKind::Bracket, block_tokens),
                         pos: token_pos
                     });
+                },
+                ':' => {
+                    tokens.push(Token {
+                        kind: TokenKind::Assignment,
+                        pos: pos.clone()
+                    });
+                    pos.1 += 1;
+                    code.next();
+                },
+                ',' => {
+                    tokens.push(Token {
+                        kind: TokenKind::Separator(','),
+                        pos: pos.clone()
+                    });
+                    pos.1 += 1;
+                    code.next();
+                },
+                ';' => {
+                    tokens.push(Token {
+                        kind: TokenKind::CommandTerminator,
+                        pos: pos.clone()
+                    });
+                    pos.1 += 1;
+                    code.next();
                 },
                 c if c.is_digit(10) || c == '.' => {
                     let float_pos = pos.clone();
@@ -82,13 +194,70 @@ fn tokenize_setup(code: &mut Peekable<impl Iterator<Item = char>>,
                     });
                 },
                 _ => {
-                    return Err(TokenError {
-                        kind: TokenErrorKind::UnexpectedToken,
-                        pos: pos.clone()
-                    });
+                    let orig_pos = pos.clone();
+                    if let Ok(operator) = read_operator(code, pos) {
+                        tokens.push(Token {
+                            kind: TokenKind::Operator(operator),
+                            pos: orig_pos,
+                        });
+                    }else{
+                        return Err(TokenError {
+                            kind: TokenErrorKind::UnexpectedToken(c),
+                            pos: orig_pos
+                        });
+                    }
                 },
             }
+        }else {
+            if let Some(terminator) = terminator {
+                return Err(TokenError {
+                    kind: TokenErrorKind::ExpectedToken(terminator),
+                    pos: pos.clone()
+                });
+            }else{
+                break;
+            }
         }
+    }
+
+    Ok(tokens)
+}
+
+fn read_operator(code: &mut Peekable<impl Iterator<Item = char>>, pos: &mut (usize, usize))
+        -> Result<Operator, TokenError> {
+    let op_pos = pos.clone();
+    if let Some(&c) = code.peek() {
+        use Operator::*;
+        let operator = match c {
+            '+' => Some(Add),
+            '-' => Some(Sub),
+            '*' => Some(Mult),
+            '/' => Some(Div),
+            '%' => Some(Mod),
+            _ => None,
+        };
+
+        if let Some(operator) = operator {
+            // Since we read an operator, we should
+            // increment the counter.
+            // NOTE: If there ever is an
+            // operator with 2 symbols, this code
+            // will have to change slightly
+            code.next();
+            pos.1 += 1;
+
+            Ok(operator)
+        }else{
+            Err(TokenError {
+                kind: TokenErrorKind::InvalidOperator,
+                pos: op_pos,
+            })
+        }
+    }else{
+        Err(TokenError {
+            kind: TokenErrorKind::UnexpectedEndOfFile,
+            pos: op_pos,
+        })
     }
 }
 

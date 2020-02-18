@@ -20,7 +20,7 @@ pub fn compile_file(path: impl AsRef<Path>) -> Result<Synth, CompileError> {
         std::fs::read_to_string(path)
         .map_err(|v| CompileError { kind: CompileErrorKind::IOError(v), pos: None })?;    
 
-    println!("{:?}", tokenize::tokenize(contents.as_str()));
+    tokenize::print_tokens(&tokenize::tokenize(contents.as_str()).unwrap()[..]);
 
     Err(CompileError {
         kind: CompileErrorKind::TestError,
