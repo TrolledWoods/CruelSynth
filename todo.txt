@@ -1,6 +1,5 @@
 # Current task:
 * Split into tokenizer, parser e.t.c
- * Make tokenizer
  * Make parser
  * AST into synth engine format
 

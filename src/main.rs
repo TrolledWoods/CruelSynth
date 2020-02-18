@@ -8,7 +8,7 @@ fn main() {
     use synth::{ Node, NodeType };
     use operator::Operator;
 
-    lang::compile_file("input.txt");
+    lang::compile_file("input.txt").unwrap();
 
     let mut synth = synth::Synth::new();
     let const_1 = synth.add_node(Node::constant(10.0));

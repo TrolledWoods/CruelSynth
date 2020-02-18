@@ -44,6 +44,7 @@ pub enum TokenKind {
     Identifier(String),
     Float(f32),
     Block(BlockKind, Vec<Token>),
+    Variable,
     CommandTerminator,
 }
 
@@ -84,6 +85,7 @@ impl Display for TokenKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use TokenKind::*;
         match self {
+            Variable => write!(f, "$")?,
             Operator(op) => write!(f, "{:?}", op)?,
             Assignment => write!(f, ":")?,
             Separator(c) => write!(f, "{}", c)?,
@@ -152,6 +154,14 @@ fn tokenize_setup(code: &mut Peekable<impl Iterator<Item = char>>,
                         kind: TokenKind::Block(BlockKind::Bracket, block_tokens),
                         pos: token_pos
                     });
+                },
+                '$' => {
+                    tokens.push(Token {
+                        kind: TokenKind::Variable,
+                        pos: pos.clone()
+                    });
+                    pos.1 += 1;
+                    code.next();
                 },
                 ':' => {
                     tokens.push(Token {
