@@ -2,7 +2,7 @@
 /// ever be equal to "NIL_NODE_ID", because
 /// that is essentially null
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
-pub struct NodeId(u32);
+pub struct NodeId(pub u32);
 
 impl NodeId {
     #[inline]
@@ -35,7 +35,7 @@ impl MaybeNodeId {
 
     #[inline]
     fn get(self) -> Option<NodeId> {
-        if self.0 != NIL_NODE_ID {
+        if self.0 == NIL_NODE_ID {
             None
         }else{
             Some(NodeId(self.0))
@@ -65,6 +65,23 @@ impl Synth {
     pub fn new() -> Synth {
         Synth {
             nodes: Vec::new(),
+        }
+    }
+
+    pub fn run(&mut self, buffer: &mut Vec<f32>, dt_per_sample: f32) {
+        buffer.clear();
+
+        let mut input_buffer = [0f32; MAX_INPUTS];
+        for node in self.nodes.iter_mut() {
+            // Find all the inputs
+            for (i, input) in node.inputs.iter().enumerate() {
+                if let Some(input) = input.get() {
+                    input_buffer[i] = buffer[input.0 as usize];
+                }
+            }
+
+            let output = node.kind.evaluate(&input_buffer, dt_per_sample);
+            buffer.push(output);
         }
     }
 

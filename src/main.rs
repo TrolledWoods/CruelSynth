@@ -119,28 +119,24 @@ fn main() {
     use synth::{ ShallowNode, NodeType, ConstantOp };
 
     let mut synth = synth::Synth::new();
-    let const_1 = synth.add_shallow_node(ShallowNode::constant(50.0));
-    let osc = synth.add_shallow_node(ShallowNode::oscillator(const_1, 0.0));
+    let const_1 = synth.add_shallow_node(ShallowNode::constant(10.0));
+    let yes = synth.add_shallow_node(ShallowNode::oscillator(const_1, 0.0));
+    let const_2 = synth.add_shallow_node(ShallowNode::constant(120.0));
+    let const_3 = synth.add_shallow_node(ShallowNode::constant(150.0));
+    let const_4 = synth.add_shallow_node(ShallowNode::constant(1.25));
+    let osc_yes = synth.add_shallow_node(ShallowNode::oscillator(const_4, 0.0));
+    let osc_mul = synth.add_shallow_node(ShallowNode::constant_op(ConstantOp::Mult, osc_yes, const_2));
+    let mult = synth.add_shallow_node(ShallowNode::constant_op(ConstantOp::Mult, osc_mul, yes));
+    let add = synth.add_shallow_node(ShallowNode::constant_op(ConstantOp::Add, const_3, mult));
+    let osc = synth.add_shallow_node(ShallowNode::oscillator(add, 0.0));
 
-    return;
-
-    let mut functions: HashMap<&'static str, Box<dyn Fn() -> Box<dyn SoundGenerator>>> = HashMap::new();
-    functions.insert("osc", Box::new(|| Box::new(Oscillator::new())));
-    functions.insert("*", Box::new(|| Box::new(|a, b| a * b)));
-    functions.insert("+", Box::new(|| Box::new(|a, b| a + b)));
-    functions.insert("clamp", Box::new(|| Box::new(|a: f32, b: f32| a.min(1.0).max(-1.0))));
-    functions.insert("delay", Box::new(|| Box::new(effects::Delay::new(80000))));
-    functions.insert("big_delay", Box::new(|| Box::new(effects::Delay::new(180000))));
-
-    let program = std::fs::read_to_string("input.txt").unwrap();
-
-    let mut synthesizer = parse_synthesizer(&program[..], &functions).unwrap();
-
-    for (i, var) in synthesizer.data.iter().enumerate() {
-        println!("{}: {:?}", i, &var);
+    let mut samples = Vec::new();
+    let mut buffer = Vec::new();
+    for i in (0..(48000 * 10)) {
+        synth.run(&mut buffer, 1.0 / 48000.0);
+        samples.push((buffer[osc.0 as usize], buffer[osc.0 as usize]));
     }
-
-    let samples = run_synthesizer(&mut synthesizer).unwrap();
+    // let program = std::fs::read_to_string("input.txt").unwrap();
 
     write_to_wave("C:/Users/johnm/Music/test2.wav", &samples[..], 48000);
 }
