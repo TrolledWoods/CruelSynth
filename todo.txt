@@ -17,6 +17,10 @@ get more specific tasks to do, which I will then add to the todo list.
 
 ## Synth engine
 * Make a macro to make it easier to add more node types
+* Require no internal mutation when running synth, i.e. keep all the information that nodes need
+   in a different datastructure, so that a synth can run even if it is not a mutable reference.
+   This will give more control over when it is safe to hand out raw id's to nodes(which is faster),
+   and when it is required to hand out static id's, e.t.c.
 * Add multithreading, suggestion: Make it "layer" based, i.e. we start by giving sections of the synth
     that have nothing to do with each other to different threads, then we put the values that are
     needed by other parts into a list. Then we hand that list to each 2:nd layer synth, and multithread

@@ -13,7 +13,7 @@ fn main() {
     let mut samples = Vec::new();
     let mut buffer = Vec::new();
     let mut per_frame = 1.0 / 48000.0;
-    for _ in (0..(48000 * 60)) {
+    for _ in (0..(48000.0 * 100.0) as usize) {
         synth.run(&mut buffer, per_frame);
         samples.push((buffer[left_id.0 as usize], buffer[right_id.0 as usize]));
     }

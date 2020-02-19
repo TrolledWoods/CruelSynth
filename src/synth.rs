@@ -1,9 +1,10 @@
 use crate::operator::Operator;
+use std::collections::HashMap;
 
 /// The contents of this NodeId type cannot
 /// ever be equal to "NIL_NODE_ID", because
 /// that is essentially null
-#[derive(Eq, PartialEq, Clone, Copy, Debug)]
+#[derive(Eq, PartialEq, Clone, Copy, Debug, Hash)]
 pub struct NodeId(pub u32);
 
 impl NodeId {
@@ -60,13 +61,36 @@ const MAX_INPUTS: usize = 3;
 /// before deleting anything.
 #[derive(Debug)]
 pub struct Synth {
-    nodes: Vec<Node>
+    // The "nodes" in the synth.
+    nodes: Vec<Node>,
+    // TODO: Allow for static node id's, i.e.
+    // node ids that never change and always
+    // point to the same node. Of course,
+    // they may not point to any node if the
+    // node was removed, but they will never point
+    // to the wrong node.
+    // These would then be what was handed out to
+    // external parties if they had to keep track
+    // of some node.
+    static_node_id_map: HashMap<u32, NodeId>,
+    static_node_id_ctr: u32,
+
+    // Probe stuff
+    probes: HashMap<NodeId, Probe>,
+    probe_id_map: HashMap<ProbeId, NodeId>,
+    probe_id_ctr: u32,
 }
 
 impl Synth {
     pub fn new() -> Synth {
         Synth {
             nodes: Vec::new(),
+            static_node_id_map: HashMap::new(),
+            static_node_id_ctr: 0,
+
+            probes: HashMap::new(),
+            probe_id_map: HashMap::new(),
+            probe_id_ctr: 0,
         }
     }
 
@@ -74,7 +98,13 @@ impl Synth {
         buffer.clear();
 
         let mut input_buffer = [0f32; MAX_INPUTS];
-        for node in self.nodes.iter_mut() {
+
+        // Just to let the borrow checker know that
+        // I am not borrowing self in a wierd say
+        let mut nodes = self.nodes.iter_mut();
+        let probes = &self.probes;
+        let probe_id_map = &self.probe_id_map;
+        for node in nodes {
             // Find all the inputs
             for (i, input) in node.inputs.iter().enumerate() {
                 if let Some(input) = input.get() {
@@ -82,8 +112,20 @@ impl Synth {
                 }
             }
 
-            let output = node.kind.evaluate(&input_buffer, dt_per_sample);
+            let output = node.kind.evaluate(
+                |probe, val| {
+                    let val = (val / dt_per_sample).floor() as usize;
+                    let dat = probes.get(probe_id_map.get(&probe)?)?.get_data(val);
+                    dat
+                },
+                &input_buffer, 
+                dt_per_sample);
             buffer.push(output);
+        }
+
+        for probe in self.probes.values_mut() {
+            let input = buffer[probe.probing.0 as usize];
+            probe.add_data(input);
         }
     }
 
@@ -108,6 +150,79 @@ impl Synth {
             self.nodes.push(node);
             node_id
         }
+    }
+
+    pub fn allocate_probe_id(&mut self) -> ProbeId {
+        let id = ProbeId(self.probe_id_ctr);
+        self.probe_id_ctr += 1;
+        id
+    }
+
+    pub fn add_probe(&mut self, id: ProbeId, size: usize, probing: NodeId) {
+        self.probes.insert(probing, Probe::new(size, probing));
+        self.probe_id_map.insert(id, probing);
+    }
+}
+
+#[derive(Hash,Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProbeId(u32);
+
+// The point of the probe datastructure is to
+// give a simple interface to a probe, and allow
+// a fixed size list of data where you can
+// effeciently insert some data at the begginging
+// and drop the data at the end in one operation
+#[derive(Debug)]
+pub struct Probe {
+    data: Vec<f32>,
+    probing: NodeId,
+
+    // The data start is an offset from the beginning
+    // of the data vector where the first element is located.
+    // The reason for this is so that we can move this pointer
+    // instead of moving every element in the data vector,
+    // which is a lot more efficient.
+    data_start: usize,
+}
+
+impl Probe {
+    pub fn new(size: usize, probing: NodeId) -> Probe {
+        Probe {
+            data: vec![0.0; size],
+            probing: probing,
+            data_start: 0,
+        }
+    }
+
+    pub fn get_data(&self, loc: usize) -> Option<f32> {
+        // The data wraps around. The location has to be less than the lenth of the data,
+        // i.e. the size that was given at the start. 
+        if loc < self.data.len() {
+            // Do this to wrap the pointer around the data vector.
+            // All this is again to allow for easy insertion of data
+            // at the first element without actually moving
+            // any memory around
+            let index = (self.data_start + loc) % self.data.len();
+            Some(self.data[index])
+        }else{
+            None
+        }
+    }
+
+    pub fn add_data(&mut self, data: f32) {
+        // A wrapping subtraction
+        // has to be done since usize cannot be less than 0,
+        // and also because of the purpose of this data
+        if self.data_start > 0 {
+            self.data_start -= 1;
+        }else {
+            self.data_start = self.data.len() - 1;
+        }
+
+        // Set the first element to the data. This operation
+        // also wipes the previous last element clean, two
+        // birds with one stone!
+        self.data[self.data_start] = data;
     }
 }
 
@@ -145,6 +260,15 @@ impl Node {
         }
     }
 
+    pub fn delay(max: f32, delay: NodeId, probe: ProbeId) -> Node {
+        let mut inputs = [MaybeNodeId::none(); MAX_INPUTS];
+        inputs[0] = delay.maybe();
+        Node {
+            inputs: inputs,
+            kind: NodeType::Delay(max, probe),
+        }
+    }
+
     pub fn constant(constant: f32) -> Node {
         Node {
             inputs: [MaybeNodeId::none(); MAX_INPUTS],
@@ -170,6 +294,7 @@ pub enum NodeType {
     Clamp(f32, f32),
     Constant(f32),
     ConstantOp(Operator),
+    Delay(f32, ProbeId), 
 }
 
 impl NodeType {
@@ -181,6 +306,7 @@ impl NodeType {
             Clamp(_, _) => true,
             Constant(_) => true,
             ConstantOp(_) => true,
+            Delay(_, _) => false,
         }
     }
 
@@ -193,11 +319,15 @@ impl NodeType {
             Clamp(_, _) => 1,
             Constant(_) => 0,
             ConstantOp(_) => 2,
+            Delay(_, _) => 1,
         }
     }
 
     #[inline]
-    pub fn evaluate(&mut self, inputs: &[f32; MAX_INPUTS], dt_per_sample: f32) -> f32 {
+    pub fn evaluate(&mut self, 
+                    get_probe_value: impl Fn(ProbeId, f32) -> Option<f32>, 
+                    inputs: &[f32; MAX_INPUTS], 
+                    dt_per_sample: f32) -> f32 {
         use NodeType::*;
         match self {
             SquareOscillator(t) => {
@@ -209,10 +339,14 @@ impl NodeType {
                 (*t * 2.0 * std::f32::consts::PI).sin()
             },
             Clamp(min, max) => {
-                ((inputs[0] + 1.0) / 2.0) * (*max - *min) + *min
+                inputs[0].max(*min).min(*max)
             },
             Constant(c) => *c,
             ConstantOp(op) => op.evaluate(inputs[0], inputs[1]),
+            Delay(max, probe) => {
+                let t = inputs[0].max(0.0).min(*max);
+                get_probe_value(*probe, t).expect("Expected a valid probe")
+            },
         }
     }
 }
