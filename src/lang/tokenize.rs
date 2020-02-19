@@ -206,6 +206,19 @@ fn tokenize_setup(code: &mut Peekable<impl Iterator<Item = char>>,
                 _ => {
                     let orig_pos = pos.clone();
                     if let Ok(operator) = read_operator(code, pos) {
+                        if operator == Operator::Sub {
+                            if let Some(c) = code.peek() {
+                                if c.is_digit(10) {
+                                    let float = - read_float(code, pos)?;
+                                    tokens.push(Token {
+                                        kind: TokenKind::Float(float),
+                                        pos: pos.clone()
+                                    });
+                                    continue;
+                                }
+                            }
+                        }
+
                         tokens.push(Token {
                             kind: TokenKind::Operator(operator),
                             pos: orig_pos,

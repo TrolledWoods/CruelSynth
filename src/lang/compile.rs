@@ -11,13 +11,14 @@ pub struct CompileError {
 
 #[derive(Debug)]
 pub enum CompileErrorKind {
-    UnknownFunctionName,
+    UnknownFunctionName(String),
     InvalidVariableName,
     InvalidNumberOfOperatorArgs,
     InvalidArgNumber,
+    NoOutputVariables,
 }
 
-pub fn compile(nodes: Vec<Node<CommandNode>>) -> Result<Synth, CompileError> {
+pub fn compile(nodes: Vec<Node<CommandNode>>) -> Result<(Synth, NodeId, NodeId), CompileError> {
     let mut synth = Synth::new();
     let mut variables = HashMap::new();
 
@@ -30,7 +31,29 @@ pub fn compile(nodes: Vec<Node<CommandNode>>) -> Result<Synth, CompileError> {
         }
     }
 
-    Ok(synth)
+    // Get the variables used for output. 
+    // These are either 'out' for mono output,
+    // or 'left' and 'right' for stereo
+    let (left, right) = if let Some(&node) = variables.get("out") {
+        (node, node)
+    }else{
+        let left = if let Some(&node) = variables.get("left") {
+            node
+        }else { return Err(CompileError {
+                    kind: CompileErrorKind::NoOutputVariables,
+                    pos: None });
+        };
+        let right = if let Some(&node) = variables.get("right") {
+            node
+        }else { return Err(CompileError {
+                    kind: CompileErrorKind::NoOutputVariables,
+                    pos: None });
+        };
+
+        (left, right)
+    };
+
+    Ok((synth, left, right))
 }
 
 fn compile_expression(expr: Node<ExpressionNode>, vars: &HashMap<String, NodeId>, synth: &mut Synth)
@@ -64,6 +87,40 @@ fn compile_expression(expr: Node<ExpressionNode>, vars: &HashMap<String, NodeId>
         },
         ExpressionNode::FunctionCall(name, const_args, args) => {
             match name.as_str() {
+                "clamp" => {
+                    if args.len() == 1 {
+                        let mut args = args.into_iter();
+                        let arg_1 = compile_expression(args.next().unwrap(), vars, synth)?;
+                        let min = if let Some(min) = const_args.get("min") { min.kind }
+                                  else { -1.0 };
+                        let max = if let Some(max) = const_args.get("max") { max.kind }
+                                  else { 1.0 };
+                        println!("{} -> {}", min, max);
+                        Ok(synth.add_node(synth::Node::clamp(arg_1, min, max)))
+                    }else {
+                        Err(CompileError {
+                            kind: CompileErrorKind::InvalidArgNumber,
+                            pos: args.get(0).map(|v| v.pos).flatten()
+                        })
+                    }
+                },
+                "square" => {
+                    if args.len() == 1 {
+                        let mut args = args.into_iter();
+                        let arg_1 = compile_expression(args.next().unwrap(), vars, synth)?;
+                        let offset = if let Some(off) = const_args.get("off") {
+                            off.kind
+                        }else{
+                            0.0
+                        };
+                        Ok(synth.add_node(synth::Node::square_oscillator(arg_1, offset)))
+                    }else{
+                        Err(CompileError {
+                            kind: CompileErrorKind::InvalidArgNumber,
+                            pos: args.get(0).map(|v| v.pos).flatten()
+                        })
+                    }
+                },
                 "osc" => {
                     if args.len() == 1 {
                         let mut args = args.into_iter();
@@ -83,7 +140,7 @@ fn compile_expression(expr: Node<ExpressionNode>, vars: &HashMap<String, NodeId>
                 },
                 _ => {
                     Err(CompileError {
-                        kind: CompileErrorKind::UnknownFunctionName,
+                        kind: CompileErrorKind::UnknownFunctionName(name),
                         pos: args.get(0).map(|v| v.pos).flatten()
                     })
                 }

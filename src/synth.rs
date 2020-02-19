@@ -127,6 +127,24 @@ impl Node {
         }
     }
 
+    pub fn clamp(thing: NodeId, min: f32, max: f32) -> Node {
+        let mut inputs = [MaybeNodeId::none(); MAX_INPUTS];
+        inputs[0] = thing.maybe();
+        Node {
+            inputs: inputs,
+            kind: NodeType::Clamp(min, max),
+        }
+    }
+
+    pub fn square_oscillator(freq: NodeId, offset: f32) -> Node {
+        let mut inputs = [MaybeNodeId::none(); MAX_INPUTS];
+        inputs[0] = freq.maybe();
+        Node {
+            inputs: inputs,
+            kind: NodeType::SquareOscillator(offset),
+        }
+    }
+
     pub fn constant(constant: f32) -> Node {
         Node {
             inputs: [MaybeNodeId::none(); MAX_INPUTS],
@@ -147,7 +165,9 @@ impl Node {
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum NodeType {
+    SquareOscillator(f32),
     Oscillator(f32),
+    Clamp(f32, f32),
     Constant(f32),
     ConstantOp(Operator),
 }
@@ -156,7 +176,9 @@ impl NodeType {
     pub fn is_constant(&self) -> bool {
         use NodeType::*;
         match self {
+            SquareOscillator(_) => false,
             Oscillator(_) => false,
+            Clamp(_, _) => true,
             Constant(_) => true,
             ConstantOp(_) => true,
         }
@@ -166,7 +188,9 @@ impl NodeType {
     pub fn n_inputs(&self) -> usize {
         use NodeType::*;
         match self {
+            SquareOscillator(_) => 1,
             Oscillator(_) => 1,
+            Clamp(_, _) => 1,
             Constant(_) => 0,
             ConstantOp(_) => 2,
         }
@@ -176,9 +200,16 @@ impl NodeType {
     pub fn evaluate(&mut self, inputs: &[f32; MAX_INPUTS], dt_per_sample: f32) -> f32 {
         use NodeType::*;
         match self {
+            SquareOscillator(t) => {
+                *t = (*t + inputs[0].abs() * dt_per_sample) % 1.0;
+                ((*t % 1.0) * 2.0).ceil() - 1.0
+            },
             Oscillator(t) => {
-                *t += inputs[0] * dt_per_sample;
+                *t = (*t + inputs[0].abs() * dt_per_sample) % 1.0;
                 (*t * 2.0 * std::f32::consts::PI).sin()
+            },
+            Clamp(min, max) => {
+                ((inputs[0] + 1.0) / 2.0) * (*max - *min) + *min
             },
             Constant(c) => *c,
             ConstantOp(op) => op.evaluate(inputs[0], inputs[1]),

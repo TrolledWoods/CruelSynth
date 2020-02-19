@@ -8,13 +8,14 @@ fn main() {
     use synth::{ Node, NodeType };
     use operator::Operator;
 
-    let mut synth = lang::compile_file("input.txt").unwrap();
+    let (mut synth, left_id, right_id) = lang::compile_file("input.txt").unwrap();
 
     let mut samples = Vec::new();
     let mut buffer = Vec::new();
+    let mut per_frame = 1.0 / 48000.0;
     for _ in (0..(48000 * 60)) {
-        synth.run(&mut buffer, 1.0 / 48000.0);
-        samples.push((buffer[buffer.len() - 1], buffer[buffer.len() - 1]));
+        synth.run(&mut buffer, per_frame);
+        samples.push((buffer[left_id.0 as usize], buffer[right_id.0 as usize]));
     }
 
     write_to_wave("C:/Users/johnm/Music/test2.wav", &samples[..], 48000);
