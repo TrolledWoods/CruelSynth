@@ -346,7 +346,11 @@ fn skip_whitespace(code: &mut Peekable<impl Iterator<Item = char>>, pos: &mut (u
                 if value == '\n' {
                     pos.1 = 0;
                     pos.0 += 1;
-                    return;
+
+                    // Since we hit a new line, we should
+                    // keep skipping whitespace, but the
+                    // comment has ended at this point
+                    break;
                 }else{
                     pos.1 += 1;
                 }

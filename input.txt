@@ -1,2 +1,41 @@
-left: square 640.0;
-right: 0;
+# All operators take two parameters. The parameters are inside parenthesees,
+# and are separated by colons.
+# (Also, number can be specified in a number of ways)
+x: +(1, 5.0);
+y: -(4.0, .1);
+
+# Some more complex functions only need 1 parameter. In this case,
+# the paranthesees are optional, and can be omitted.
+# The "osc" function is pretty important, it produces a sin
+# wave with the argument giving the frequency(in hertz)
+x_1: osc(310);
+y_1: osc 310;
+
+# Since we have all these variables, why not use some we
+# defined previously?
+# Variables are accessed by this syntax: ``$ [variable name]``.
+# They don't have to be joined together, there can be whitespace in between.
+# I just think it looks nicer for them to be joined together.
+x_2: +($x, $y);
+y_2: +($x_1, $y_1);
+
+# Some functions have properties. Properties can at the moment
+# only be numbers, not expressions. Also, if you set a property
+# that doesn't exist.... Nothing happens. It's a bit wishy washy.
+# This examples takes the "osc" function, which usually oscillates
+# from -1 to 1, and maps it to oscillate between 0.1 and 1 instead.
+scale_lfo: clamp[min: 0.1, max: 1.0] osc 1.0;
+
+# In order to actually have sound come out, we
+# have to tell the program what to put out into the
+# speaker. This can be done 2 ways:
+# STEREO: set left and right values to whatever you
+# want to be exported there
+left: * ($scale_lfo, $x_2);
+right: * ($scale_lfo, $y_2);
+
+# MONO: Just set the "out" value to whatever you
+# want both the left and right channel to be set to.
+# Also, if out is defined, left and right will
+# be ignored.
+out: * ($scale_lfo, +($x_2, $y_2));
