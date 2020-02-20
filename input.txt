@@ -1,10 +1,11 @@
 bass_freq: +(80, *(40, osc 0.01));
 
 # Synth
-kick_in: clamp[min: 0, max: 1] *(30, osc[off: 0.5] 0.008);
-beat: *(0.5, +(1.0, osc[off: 0.5] 1));
-beat_sound: osc +(500, *(100, osc 0.05));
-beat_yes: *($kick_in, +(*(0.6, *($beat, $beat_sound)), *(0.3, delay (0.1, $beat_yes))));
+kick_in: clamp[min: 0, max: 1] *(1, osc[off: 0.5] 0.02);
+beat: +(0.1, *(0.3, +(1.0, osc[off: 0.5] 1)));
+beat_sound: square +(238, *(10, osc 0.05));
+feedback_time_synth: *(0.4, +(1.1, osc *(0.002, $bass_freq)));
+beat_yes: *($kick_in, +(*(0.6, *($beat, $beat_sound)), *(0.3, delay ($feedback_time_synth, $beat_yes))));
 
 # Bright sound
 lfo: clamp[min:0, max:1] *(10, -(osc 1, 0.9));
