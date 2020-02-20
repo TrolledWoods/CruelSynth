@@ -3,6 +3,8 @@
    in a different datastructure, so that a synth can run even if it is not a mutable reference.
    This will give more control over when it is safe to hand out raw id's to nodes(which is faster),
    and when it is required to hand out static id's, e.t.c.
+   (also this allows me to do polysynth more easily in the future, as I can just run the synth
+    several times over without cloning the synths data unnecessarily)
 
 # Todo list
 NOTE: This todo list is far from finished, and more will probably be added in the future,
