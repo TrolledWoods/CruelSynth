@@ -5,20 +5,30 @@ mod lang;
 mod operator;
 
 fn main() {
-    use synth::{ Node, NodeType };
-    use operator::Operator;
+    use std::env;
+    use std::path::{ Path, PathBuf };
 
-    let (mut synth, left_id, right_id) = lang::compile_file("input.txt").unwrap();
+    let mut args = env::args();
+    args.next();
+    if let Some(path) = args.next() {
+        let mut path = PathBuf::from(path);
 
-    let mut samples = Vec::new();
-    let mut buffer = Vec::new();
-    let mut per_frame = 1.0 / 48000.0;
-    for _ in (0..(48000.0 * 100.0) as usize) {
-        synth.run(&mut buffer, per_frame);
-        samples.push((buffer[left_id.0 as usize], buffer[right_id.0 as usize]));
+        use synth::{ Node, NodeType };
+        use operator::Operator;
+
+        let (mut synth, left_id, right_id) = lang::compile_file(&path).unwrap();
+
+        let mut samples = Vec::new();
+        let mut buffer = Vec::new();
+        let mut per_frame = 1.0 / 48000.0;
+        for _ in (0..(48000.0 * 100.0) as usize) {
+            synth.run(&mut buffer, per_frame);
+            samples.push((buffer[left_id.0 as usize], buffer[right_id.0 as usize]));
+        }
+
+        path.set_extension("wav");
+        write_to_wave(&path, &samples[..], 48000);
     }
-
-    write_to_wave("C:/Users/johnm/Music/test2.wav", &samples[..], 48000);
 }
 
 fn write_to_wave(path: impl AsRef<Path>, data: &[(f32, f32)], sample_rate: u32) {

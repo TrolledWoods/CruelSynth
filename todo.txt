@@ -1,7 +1,8 @@
 # Current task:
-* "Probes", variables can be probed in order to get a history of their values.
-            This should allow delays to be more efficient, as multiple delays can
-	    use the same probe if they are delaying the same value
+* Require no internal mutation when running synth, i.e. keep all the information that nodes need
+   in a different datastructure, so that a synth can run even if it is not a mutable reference.
+   This will give more control over when it is safe to hand out raw id's to nodes(which is faster),
+   and when it is required to hand out static id's, e.t.c.
 
 # Todo list
 NOTE: This todo list is far from finished, and more will probably be added in the future,
@@ -9,6 +10,7 @@ as I think of more things to add to the project. Also, as I work on some feature
 get more specific tasks to do, which I will then add to the todo list.
 
 ## "Code parser"
+* Add multi-file support
 * Design some more good syntax(like multiple files)
 
 ## Sequencing
@@ -16,11 +18,9 @@ get more specific tasks to do, which I will then add to the todo list.
 * Add midi import support?
 
 ## Synth engine
+* Filters
+* Normalizing
 * Make a macro to make it easier to add more node types
-* Require no internal mutation when running synth, i.e. keep all the information that nodes need
-   in a different datastructure, so that a synth can run even if it is not a mutable reference.
-   This will give more control over when it is safe to hand out raw id's to nodes(which is faster),
-   and when it is required to hand out static id's, e.t.c.
 * Add multithreading, suggestion: Make it "layer" based, i.e. we start by giving sections of the synth
     that have nothing to do with each other to different threads, then we put the values that are
     needed by other parts into a list. Then we hand that list to each 2:nd layer synth, and multithread
