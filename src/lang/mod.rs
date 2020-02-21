@@ -1,6 +1,6 @@
 use std::path::Path;
 use crate::synth::Synth;
-use crate::synth::NodeId;
+use crate::synth::Id;
 
 mod tokenize;
 mod parser;
@@ -21,7 +21,7 @@ pub enum CompileErrorKind {
     TestError,
 }
 
-pub fn compile_file(path: impl AsRef<Path>) -> Result<(Synth, NodeId, NodeId), CompileError> {
+pub fn compile_file(path: impl AsRef<Path>) -> Result<(Synth, Id, Id), CompileError> {
     let contents = 
         std::fs::read_to_string(path)
         .map_err(|v| CompileError { kind: CompileErrorKind::IOError(v), pos: None })?;    

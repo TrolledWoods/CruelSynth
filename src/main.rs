@@ -13,17 +13,16 @@ fn main() {
     if let Some(path) = args.next() {
         let mut path = PathBuf::from(path);
 
-        use synth::{ Node, NodeType };
         use operator::Operator;
 
-        let (mut synth, left_id, right_id) = lang::compile_file(&path).unwrap();
+        let (synth, left_id, right_id) = lang::compile_file(&path).unwrap();
+        println!("{:?}", synth);
+        let mut executor = synth::ExecutionData::new(&synth, 48000);
 
         let mut samples = Vec::new();
-        let mut buffer = Vec::new();
-        let mut per_frame = 1.0 / 48000.0;
         for _ in (0..(48000.0 * 100.0) as usize) {
-            synth.run(&mut buffer, per_frame);
-            samples.push((buffer[left_id.0 as usize], buffer[right_id.0 as usize]));
+            executor.run();
+            samples.push((0.0, 0.0));
         }
 
         path.set_extension("wav");

@@ -1,6 +1,6 @@
 use crate::lang::parser::{ self, Node, CommandNode, ExpressionNode };
 use crate::operator::Operator;
-use crate::synth::{ self, Synth, NodeId, ProbeId };
+use crate::synth::{ self, Synth, Id, NodeKind };
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -18,7 +18,7 @@ pub enum CompileErrorKind {
     NoOutputVariables,
 }
 
-pub fn compile(nodes: Vec<Node<CommandNode>>) -> Result<(Synth, NodeId, NodeId), CompileError> {
+pub fn compile(nodes: Vec<Node<CommandNode>>) -> Result<(Synth, Id, Id), CompileError> {
     let mut synth = Synth::new();
     let mut variables = HashMap::new();
     let mut probes = Vec::new();
@@ -67,12 +67,12 @@ pub fn compile(nodes: Vec<Node<CommandNode>>) -> Result<(Synth, NodeId, NodeId),
 }
 
 fn compile_expression(expr: Node<ExpressionNode>, 
-                      probes: &mut Vec<(ProbeId, usize, Node<ExpressionNode>)>, 
-                      vars: &HashMap<String, NodeId>, synth: &mut Synth)
-                       -> Result<NodeId, CompileError> {
+                      probes: &mut Vec<(Id, f32, Node<ExpressionNode>)>, 
+                      vars: &HashMap<String, Id>, synth: &mut Synth)
+                       -> Result<Id, CompileError> {
     match expr.kind {
         ExpressionNode::Float(value) => {
-            Ok(synth.add_node(synth::Node::constant(value)))
+            Ok(synth.add_node(synth::NodeKind::Constant(value), &[], &[]))
         },
         ExpressionNode::Variable(string) => {
             if let Some(&id) = vars.get(&string) {
@@ -89,7 +89,7 @@ fn compile_expression(expr: Node<ExpressionNode>,
                 let mut args = args.into_iter();
                 let arg_1 = compile_expression(args.next().unwrap(), probes, vars, synth)?;
                 let arg_2 = compile_expression(args.next().unwrap(), probes, vars, synth)?;
-                Ok(synth.add_node(synth::Node::constant_op(op, arg_1, arg_2)))
+                Ok(synth.add_node(NodeKind::ConstantOp(op), &[arg_1, arg_2], &[]))
             }else{
                 Err(CompileError {
                     kind: CompileErrorKind::InvalidNumberOfOperatorArgs,
@@ -108,8 +108,8 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         let max = if let Some(max) = const_args.get("max") { max.kind }
                                   else { 5.0 };
                         // NOTE: Support other samplerates than 48000 here!!!!!!!!
-                        probes.push((probe_id, (max * 48000.0).floor() as usize, expr));
-                        Ok(synth.add_node(synth::Node::delay(max, time, probe_id)))
+                        probes.push((probe_id, max, expr));
+                        Ok(synth.add_node(synth::NodeKind::Delay(max, probe_id), &[time], &[]))
                     }else {
                         Err(CompileError {
                             kind: CompileErrorKind::InvalidArgNumber,
@@ -126,7 +126,7 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         let max = if let Some(max) = const_args.get("max") { max.kind }
                                   else { 1.0 };
                         println!("{} -> {}", min, max);
-                        Ok(synth.add_node(synth::Node::clamp(arg_1, min, max)))
+                        Ok(synth.add_node(synth::NodeKind::Clamp(min, max), &[arg_1], &[]))
                     }else {
                         Err(CompileError {
                             kind: CompileErrorKind::InvalidArgNumber,
@@ -143,7 +143,7 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         }else{
                             0.0
                         };
-                        Ok(synth.add_node(synth::Node::square_oscillator(arg_1, offset)))
+                        Ok(synth.add_node(synth::NodeKind::SquareOscillator, &[arg_1], &[offset]))
                     }else{
                         Err(CompileError {
                             kind: CompileErrorKind::InvalidArgNumber,
@@ -160,7 +160,7 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         }else{
                             0.0
                         };
-                        Ok(synth.add_node(synth::Node::oscillator(arg_1, offset)))
+                        Ok(synth.add_node(synth::NodeKind::Oscillator, &[arg_1], &[offset]))
                     }else{
                         Err(CompileError {
                             kind: CompileErrorKind::InvalidArgNumber,
