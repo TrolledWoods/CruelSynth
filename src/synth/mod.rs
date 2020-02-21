@@ -114,6 +114,10 @@ impl Synth {
         }
     }
 
+    pub fn get_node_output(&self, node: Id) -> Option<Id> {
+        self.nodes.get(node.as_usize()).map(|node| Id(node.get_output_loc(0).unwrap() as u32))
+    }
+
     pub fn add_node(&mut self, kind: NodeKind, inputs: &[Id], data: &[f32]) -> Id {
         let node_id = Id(self.nodes.len() as u32);
         let alloc_loc = Id(self.initial_data.len() as u32);

@@ -72,7 +72,8 @@ fn compile_expression(expr: Node<ExpressionNode>,
                        -> Result<Id, CompileError> {
     match expr.kind {
         ExpressionNode::Float(value) => {
-            Ok(synth.add_node(synth::NodeKind::Constant(value), &[], &[]))
+            let node_id = synth.add_node(synth::NodeKind::Constant(value), &[], &[]);
+            Ok(synth.get_node_output(node_id).unwrap())
         },
         ExpressionNode::Variable(string) => {
             if let Some(&id) = vars.get(&string) {
@@ -89,7 +90,8 @@ fn compile_expression(expr: Node<ExpressionNode>,
                 let mut args = args.into_iter();
                 let arg_1 = compile_expression(args.next().unwrap(), probes, vars, synth)?;
                 let arg_2 = compile_expression(args.next().unwrap(), probes, vars, synth)?;
-                Ok(synth.add_node(NodeKind::ConstantOp(op), &[arg_1, arg_2], &[]))
+                let node_id = synth.add_node(NodeKind::ConstantOp(op), &[arg_1, arg_2], &[]);
+                Ok(synth.get_node_output(node_id).unwrap())
             }else{
                 Err(CompileError {
                     kind: CompileErrorKind::InvalidNumberOfOperatorArgs,
@@ -109,7 +111,8 @@ fn compile_expression(expr: Node<ExpressionNode>,
                                   else { 5.0 };
                         // NOTE: Support other samplerates than 48000 here!!!!!!!!
                         probes.push((probe_id, max, expr));
-                        Ok(synth.add_node(synth::NodeKind::Delay(max, probe_id), &[time], &[]))
+                        let node_id = synth.add_node(synth::NodeKind::Delay(max, probe_id), &[time], &[]);
+                        Ok(synth.get_node_output(node_id).unwrap())
                     }else {
                         Err(CompileError {
                             kind: CompileErrorKind::InvalidArgNumber,
@@ -126,7 +129,8 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         let max = if let Some(max) = const_args.get("max") { max.kind }
                                   else { 1.0 };
                         println!("{} -> {}", min, max);
-                        Ok(synth.add_node(synth::NodeKind::Clamp(min, max), &[arg_1], &[]))
+                        let node_id = synth.add_node(synth::NodeKind::Clamp(min, max), &[arg_1], &[]);
+                        Ok(synth.get_node_output(node_id).unwrap())
                     }else {
                         Err(CompileError {
                             kind: CompileErrorKind::InvalidArgNumber,
@@ -143,7 +147,8 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         }else{
                             0.0
                         };
-                        Ok(synth.add_node(synth::NodeKind::SquareOscillator, &[arg_1], &[offset]))
+                        let node_id = synth.add_node(synth::NodeKind::SquareOscillator, &[arg_1], &[offset]);
+                        Ok(synth.get_node_output(node_id).unwrap())
                     }else{
                         Err(CompileError {
                             kind: CompileErrorKind::InvalidArgNumber,
@@ -160,7 +165,9 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         }else{
                             0.0
                         };
-                        Ok(synth.add_node(synth::NodeKind::Oscillator, &[arg_1], &[offset]))
+
+                        let node_id = synth.add_node(synth::NodeKind::Oscillator, &[arg_1], &[offset]);
+                        Ok(synth.get_node_output(node_id).unwrap())
                     }else{
                         Err(CompileError {
                             kind: CompileErrorKind::InvalidArgNumber,

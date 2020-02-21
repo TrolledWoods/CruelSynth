@@ -37,7 +37,7 @@ impl ExecutionData<'_> {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> (f32, f32) {
         let synth = self.synth;
         let data = &mut self.node_data;
         let probes = &mut self.probes;
@@ -79,6 +79,8 @@ impl ExecutionData<'_> {
                     );
             }
         }
+
+        (self.node_data[self.node_data.len() - 1], self.node_data[self.node_data.len() - 1])
     }
 }
 

@@ -20,9 +20,9 @@ fn main() {
         let mut executor = synth::ExecutionData::new(&synth, 48000);
 
         let mut samples = Vec::new();
-        for _ in (0..(48000.0 * 100.0) as usize) {
-            executor.run();
-            samples.push((0.0, 0.0));
+        for i in (0..(48000.0 * 100.0) as usize) {
+            let (left, right) = executor.run();
+            samples.push((left, right));
         }
 
         path.set_extension("wav");
