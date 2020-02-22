@@ -203,6 +203,8 @@ impl Node {
 pub enum NodeKind {
     SquareOscillator,
     Oscillator,
+    Linear(f32),
+    Sequence(Vec<f32>),
     Clamp(f32, f32),
     Constant(f32),
     ConstantOp(Operator),
@@ -215,6 +217,8 @@ impl NodeKind {
         match self {
             SquareOscillator => false,
             Oscillator => false,
+            Linear(_) => false,
+            Sequence(_) => true,
             Clamp(_, _) => true,
             Constant(_) => true,
             ConstantOp(_) => true,
@@ -228,6 +232,8 @@ impl NodeKind {
         match self {
             SquareOscillator => 1,
             Oscillator => 1,
+            Linear(_) => 1,
+            Sequence(_) => 1,
             Clamp(_, _) => 1,
             Constant(_) => 0,
             ConstantOp(_) => 2,
@@ -248,6 +254,8 @@ impl NodeKind {
         match self {
             SquareOscillator => 1,
             Oscillator => 1,
+            Linear(_) => 1,
+            Sequence(_) => 0,
             Clamp(_, _) => 0,
             Constant(_) => 0,
             ConstantOp(_) => 0,
@@ -274,6 +282,18 @@ impl NodeKind {
             Oscillator => {
                 data[0] = (data[0] + inputs[0].abs() * dt_per_sample) % 1.0;
                 outputs[0] = (data[0] * 2.0 * std::f32::consts::PI).sin();
+            },
+            Linear(max) => {
+                let value = (data[0] + inputs[0] * dt_per_sample) % max;
+                data[0] = value;
+                outputs[0] = value;
+            },
+            Sequence(sequence) => {
+                let input = inputs[0].floor();
+                let length = sequence.len() as f32;
+                // Clamp it in a looping fashion
+                let loc = (input - ((input / length).floor() * length).floor()) as usize;
+                outputs[0] = sequence[loc];
             },
             Clamp(min, max) => {
                 outputs[0] = inputs[0].max(*min).min(*max);

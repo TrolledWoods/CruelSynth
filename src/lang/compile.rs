@@ -16,6 +16,7 @@ pub enum CompileErrorKind {
     InvalidNumberOfOperatorArgs,
     InvalidArgNumber,
     NoOutputVariables,
+    ExpectedFloat,
 }
 
 pub fn compile(nodes: Vec<Node<CommandNode>>) -> Result<(Synth, Id, Id), CompileError> {
@@ -180,6 +181,56 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         };
 
                         let node_id = synth.add_node(NodeKind::Oscillator, &[arg_1], &[offset]);
+                        Ok(synth.get_node_output(node_id).unwrap())
+                    }else{
+                        Err(CompileError {
+                            kind: CompileErrorKind::InvalidArgNumber,
+                            pos: args.get(0).map(|v| v.pos).flatten()
+                        })
+                    }
+                },
+                "linear" => {
+                    if args.len() == 1 {
+                        let mut args = args.into_iter();
+                        let arg_1 = compile_expression(args.next().unwrap(), probes, vars, synth)?;
+                        let offset = if let Some(off) = const_args.get("off") {
+                            off.kind
+                        }else{
+                            0.0
+                        };
+
+                        let max = if let Some(max) = const_args.get("max") {
+                            max.kind
+                        }else{
+                            10000.0
+                        };
+
+
+                        let node_id = synth.add_node(NodeKind::Linear(max), &[arg_1], &[offset]);
+                        Ok(synth.get_node_output(node_id).unwrap())
+                    }else{
+                        Err(CompileError {
+                            kind: CompileErrorKind::InvalidArgNumber,
+                            pos: args.get(0).map(|v| v.pos).flatten()
+                        })
+                    }
+                },
+                "seq" => {
+                    if args.len() > 1 {
+                        let mut args = args.into_iter();
+                        let arg_1 = compile_expression(args.next().unwrap(), probes, vars, synth)?;
+                        let mut sequence = Vec::new();
+                        for arg in args {
+                            if let ExpressionNode::Float(val) = arg.kind {
+                                sequence.push(val);
+                            }else{
+                                return Err(CompileError {
+                                    kind: CompileErrorKind::ExpectedFloat,
+                                    pos: arg.pos
+                                });
+                            }
+                        }
+                        let node_id = synth.add_node(NodeKind::Sequence(sequence), &[arg_1], &[]);
                         Ok(synth.get_node_output(node_id).unwrap())
                     }else{
                         Err(CompileError {
