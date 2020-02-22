@@ -1,6 +1,6 @@
 use crate::lang::parser::{ self, Node, CommandNode, ExpressionNode };
 use crate::operator::Operator;
-use crate::synth::{ self, Synth, Id, NodeKind };
+use crate::synth::{ Synth, Id, NodeKind };
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -23,20 +23,27 @@ pub fn compile(nodes: Vec<Node<CommandNode>>) -> Result<(Synth, Id, Id), Compile
     let mut variables = HashMap::new();
     let mut probes = Vec::new();
 
+    // Do the main compilation
     for node in nodes.into_iter() {
+        // Match the different types of commands that can exist.
         match node.kind {
             CommandNode::Assignment(name, expr) => {
+                // Create a node tree for the expression, 
+                // then point a variable at it
                 let id = compile_expression(*expr, &mut probes, &variables, &mut synth)?;
                 variables.insert(name, id);
             }
         }
     }
 
+    // Compile the probes
     while let Some((probe_id, max_size, expr)) = probes.pop() {
-        println!("{:?}", probe_id);
-        println!("{:?}", max_size);
-        println!("{:?}", expr);
-
+        // For each probe, we compile its node tree, i.e. the node it probes.
+        // Since we compile these as a final step, they have access to every
+        // variable defined in the file, which allows them to implement
+        // cross referencing and referencing variables that are defined
+        // after them, as in reality they are compiled after every variable
+        // is added.
         let expr_id = compile_expression(expr, &mut probes, &variables, &mut synth)?;
         synth.add_probe(probe_id, max_size, expr_id);
     }
@@ -44,23 +51,25 @@ pub fn compile(nodes: Vec<Node<CommandNode>>) -> Result<(Synth, Id, Id), Compile
     // Get the variables used for output. 
     // These are either 'out' for mono output,
     // or 'left' and 'right' for stereo
-    let (left, right) = if let Some(&node) = variables.get("out") {
-        (node, node)
-    }else{
-        let left = if let Some(&node) = variables.get("left") {
-            node
-        }else { return Err(CompileError {
-                    kind: CompileErrorKind::NoOutputVariables,
-                    pos: None });
-        };
-        let right = if let Some(&node) = variables.get("right") {
-            node
-        }else { return Err(CompileError {
-                    kind: CompileErrorKind::NoOutputVariables,
-                    pos: None });
-        };
+    let (left, right) = match variables.get("out") {
+        Some(&node) => (node, node),
+        None => {
+            let left = match variables.get("left") {
+                Some(&node) => node,
+                None => return Err(CompileError {
+                            kind: CompileErrorKind::NoOutputVariables,
+                            pos: None })
+            };
 
-        (left, right)
+            let right = match variables.get("right") {
+                Some(&node) => node,
+                None => return Err(CompileError {
+                            kind: CompileErrorKind::NoOutputVariables,
+                            pos: None })
+            };
+
+            (left, right)
+        }
     };
 
     Ok((synth, left, right))
@@ -72,7 +81,7 @@ fn compile_expression(expr: Node<ExpressionNode>,
                        -> Result<Id, CompileError> {
     match expr.kind {
         ExpressionNode::Float(value) => {
-            let node_id = synth.add_node(synth::NodeKind::Constant(value), &[], &[]);
+            let node_id = synth.add_node(NodeKind::Constant(value), &[], &[]);
             Ok(synth.get_node_output(node_id).unwrap())
         },
         ExpressionNode::Variable(string) => {
@@ -109,9 +118,9 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         let probe_id = synth.allocate_probe_id();
                         let max = if let Some(max) = const_args.get("max") { max.kind }
                                   else { 5.0 };
-                        // NOTE: Support other samplerates than 48000 here!!!!!!!!
+
                         probes.push((probe_id, max, expr));
-                        let node_id = synth.add_node(synth::NodeKind::Delay(max, probe_id), &[time], &[]);
+                        let node_id = synth.add_node(NodeKind::Delay(max, probe_id), &[time], &[]);
                         Ok(synth.get_node_output(node_id).unwrap())
                     }else {
                         Err(CompileError {
@@ -129,7 +138,7 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         let max = if let Some(max) = const_args.get("max") { max.kind }
                                   else { 1.0 };
                         println!("{} -> {}", min, max);
-                        let node_id = synth.add_node(synth::NodeKind::Clamp(min, max), &[arg_1], &[]);
+                        let node_id = synth.add_node(NodeKind::Clamp(min, max), &[arg_1], &[]);
                         Ok(synth.get_node_output(node_id).unwrap())
                     }else {
                         Err(CompileError {
@@ -147,7 +156,7 @@ fn compile_expression(expr: Node<ExpressionNode>,
                         }else{
                             0.0
                         };
-                        let node_id = synth.add_node(synth::NodeKind::SquareOscillator, &[arg_1], &[offset]);
+                        let node_id = synth.add_node(NodeKind::SquareOscillator, &[arg_1], &[offset]);
                         Ok(synth.get_node_output(node_id).unwrap())
                     }else{
                         Err(CompileError {
@@ -166,7 +175,7 @@ fn compile_expression(expr: Node<ExpressionNode>,
                             0.0
                         };
 
-                        let node_id = synth.add_node(synth::NodeKind::Oscillator, &[arg_1], &[offset]);
+                        let node_id = synth.add_node(NodeKind::Oscillator, &[arg_1], &[offset]);
                         Ok(synth.get_node_output(node_id).unwrap())
                     }else{
                         Err(CompileError {

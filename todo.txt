@@ -33,6 +33,13 @@ get more specific tasks to do, which I will then add to the todo list.
 * Optimize internal synth structures
  * Const expressions, i.e. constant func running on constants can be evaluated at startup.
 
+## Live play
+* Live play, play until a stop command is typed, like "exit" or smth
+* Allow for hot reloads of files, i.e. check if the last changed date
+  has updated, and if it has, recompile the files and replace the synth
+  to the updated version. Find some way to make the transition smooth too,
+  for example fade in/fade out. 
+
 ## Export
 * Export mp3
 * Export ogg

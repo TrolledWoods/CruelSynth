@@ -1,5 +1,6 @@
 use crate::operator::Operator;
 use std::collections::HashMap;
+use std::fmt;
 
 mod execution_data;
 pub use execution_data::ExecutionData;
@@ -76,7 +77,6 @@ const MAX_INPUTS: usize = 3;
 /// any node while holding onto a Node
 /// of your own. Make sure to drop all Nodes
 /// before deleting anything.
-#[derive(Debug)]
 pub struct Synth {
     // The nodes in the synth
     nodes: Vec<Node>,
@@ -91,6 +91,23 @@ pub struct Synth {
     probes: HashMap<Id, Probe>,
     probe_id_map: HashMap<Id, Id>,
     probe_id_ctr: u32,
+}
+
+impl fmt::Debug for Synth {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Synth:")?;
+        writeln!(f, "  Nodes:")?;
+        for (i, node) in self.nodes.iter().enumerate() {
+            writeln!(f, "    {}: {:?}", i, node)?;
+        }
+
+        writeln!(f, "  Probes:")?;
+        for probe in self.probes.iter() {
+            writeln!(f, "    {:?}", probe);
+        }
+
+        Ok(())
+    }
 }
 
 impl Synth {
@@ -112,6 +129,10 @@ impl Synth {
         }else{
             None
         }
+    }
+
+    pub fn get_node<'a>(&'a self, node: Id) -> Option<&'a Node> {
+        self.nodes.get(node.as_usize())
     }
 
     pub fn get_node_output(&self, node: Id) -> Option<Id> {
@@ -260,7 +281,7 @@ impl NodeKind {
             Constant(c) => outputs[0] = *c,
             ConstantOp(op) => outputs[0] = op.evaluate(inputs[0], inputs[1]),
             Delay(max, probe) => {
-                let t = inputs[0].max(0.0).min(*max);
+                let t = inputs[0].max(0.001).min(*max);
                 outputs[0] = get_probe_value(*probe, t).expect("Expected a valid probe");
             },
         }

@@ -21,8 +21,8 @@ fn main() {
 
         let mut samples = Vec::new();
         for i in (0..(48000.0 * 100.0) as usize) {
-            let (left, right) = executor.run();
-            samples.push((left, right));
+            executor.run();
+            samples.push((executor.get_data(left_id).unwrap(), executor.get_data(right_id).unwrap()));
         }
 
         path.set_extension("wav");
