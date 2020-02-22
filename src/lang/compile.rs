@@ -95,12 +95,16 @@ fn compile_expression(expr: Node<ExpressionNode>,
             }
         },
         ExpressionNode::Operator(op, args) => {
-            if args.len() == 2 {
+            if args.len() >= 2 {
                 let mut args = args.into_iter();
-                let arg_1 = compile_expression(args.next().unwrap(), probes, vars, synth)?;
-                let arg_2 = compile_expression(args.next().unwrap(), probes, vars, synth)?;
-                let node_id = synth.add_node(NodeKind::ConstantOp(op), &[arg_1, arg_2], &[]);
-                Ok(synth.get_node_output(node_id).unwrap())
+                let mut prev_arg = compile_expression(args.next().unwrap(), probes, vars, synth)?;
+                for arg in args {
+                    let current = compile_expression(arg, probes, vars, synth)?;
+                    let node_id = synth.add_node(NodeKind::ConstantOp(op), &[prev_arg, current], &[]);
+                    prev_arg = synth.get_node_output(node_id).unwrap();
+                }
+
+                Ok(prev_arg)
             }else{
                 Err(CompileError {
                     kind: CompileErrorKind::InvalidNumberOfOperatorArgs,

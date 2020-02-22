@@ -16,7 +16,6 @@ fn main() {
         use operator::Operator;
 
         let (synth, left_id, right_id) = lang::compile_file(&path).unwrap();
-        println!("{:?}", synth);
         let mut executor = synth::ExecutionData::new(&synth, 48000);
 
         let mut samples = Vec::new();
